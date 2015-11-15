@@ -1,0 +1,8 @@
+Package: fluoroscripts
+Title: Scripts for Importing and Processing Spectrofluorometry Data
+Version: 0.1
+Authors@R: person("Stanislav", "Sokolenko", email = "stanislav@sokolenko.net", role = c("aut", "cre"))
+Description: A collection of scripts for loading data from a Cary Eclipse Spectrophotometer, processing it into long format, and plotting it.
+Depends: R (>= 3.2.2)
+License: Apache (>= 2.0)
+LazyData: true
