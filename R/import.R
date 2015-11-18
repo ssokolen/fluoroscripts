@@ -266,6 +266,8 @@ import_data <- function(filename, cache = FALSE) {
            select(-id) %>%
            spread(variable, value) %>%
            select(-row, excitation = excitation.wavelength)
+           mutate(emission = as.numeric(emission),
+                  intensity = as.numeric(intensity))
 
     out <- rbind(out, m)
   }
