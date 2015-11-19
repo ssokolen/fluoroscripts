@@ -50,7 +50,7 @@ import_metadata <- function(filename, aggregate = FALSE, cache = FALSE) {
     split <- i
 
     # Checking whether data comes from right source
-    if (!str_detect(d.string[split + 7], 'Cary Eclipse')) {
+    if (!any(str_detect(d.string[split + c(6, 7)], 'Cary Eclipse'))) {
      msg <- 'Unexpected data format, output may be corrupted'
      warning(msg)
     }
@@ -63,21 +63,29 @@ import_metadata <- function(filename, aggregate = FALSE, cache = FALSE) {
     d <- data.frame()
     dates <- c()
 
+    # Row format requires an offset depending on how csv was generated
+    if (str_detect(d.string[[1]], 'Z Axis')) {
+      k <- 0
+    } else {
+      k <- 1
+    }  
+
     # Finding rest of breaks
     while (TRUE) {
 
       # Extracting data
       if (substring(d.string[split], 1, 1) == '') {
 
-        label <- str_trim(str_extract(d.string[split + 2], '.*?(?=_EX_)'))
-        date <- str_extract(d.string[split + 3], '\\d.*')
+        label <- str_trim(str_extract(d.string[split + k + 1], '.*?(?=_EX_)'))
+        date <- str_extract(d.string[split + k + 2], '\\d.*')
         time <- dmy_hms(date)
 
-        excitation <- str_trim(str_extract(d.string[split + 2], '(?<=_EX_).*'))
+        excitation <- str_trim(str_extract(d.string[split + k + 1], 
+                                           '(?<=_EX_).*'))
 
         param <- rep(NA, 22)
         for (i in 1:22) {
-          param[i] <- d.string[split + i + 6] %>%
+          param[i] <- d.string[split + i + k + 5] %>%
                       str_extract('(?<=\\s{3})\\w.*') %>%
                       str_trim()
         }
@@ -225,49 +233,95 @@ import_data <- function(filename, cache = FALSE) {
     # Dropping sample metainformation
     d.string <- paste(d.string[1:n.row], sep = '\n')
 
-    # Converting numeric data to data.frame
-    d <- read.csv(text = d.string, stringsAsFactors = FALSE, header = FALSE)
+    # Conversion of numeric data depends on how the csv was generated
+    if (str_detect(d.string[[1]], 'Z Axis')) {
 
-    # Stripping extra columns
-    # (assuming that all data columns will have an entry in the 3rd row)
-    n.col <- ncol(d)
-    while (is.na(d[3, n.col]) || d[3, n.col] == '') {
-      n.col <- n.col - 1
+      # Converting numeric data to data.frame
+      d <- read.csv(text = d.string, stringsAsFactors = FALSE, header = FALSE)
+
+      # Stripping extra columns
+      # (assuming that all data columns will have an entry in the 4th row)
+      n.col <- ncol(d)
+      while (is.na(d[4, n.col]) || d[4, n.col] == '') {
+        n.col <- n.col - 1
+      }
+      d <- d[, 1:n.col]
+
+      # Dropping top header and column numbers 
+      d <- d[-c(1, 3), ] 
+
+      # Renaming 
+      colnames(d) <- c('emission', paste(d[1, 2:n.col], 2:n.col, sep = 'X'))
+
+      # Dropping second row headers
+      d <- d[-2, ] 
+
+      # Gathering all columns and filtering empty values
+      m <- gather(d, id, intensity, -emission) %>%
+             mutate(id = gsub('X\\d+', '', id)) %>%
+             filter(intensity != '')
+
+      n.meta <- meta %>% 
+                  group_by(scan) %>%
+                  mutate(n = ((stop - start)/data.interval + 1))
+
+      qualifiers <- meta[rep(1:nrow(meta), n.meta$n), 
+                         c('sample', 'cell', 'scan', 'label',
+                           'excitation.wavelength')]
+
+      m <- cbind(qualifiers, m)
+
+    } else {
+
+      # Converting numeric data to data.frame
+      d <- read.csv(text = d.string, stringsAsFactors = FALSE, header = FALSE)
+
+      # Stripping extra columns
+      # (assuming that all data columns will have an entry in the 3rd row)
+      n.col <- ncol(d)
+      while (is.na(d[3, n.col]) || d[3, n.col] == '') {
+        n.col <- n.col - 1
+      }
+      d <- d[, 1:n.col]
+      
+      # Dropping second row headers
+      d <- d[-2, ] 
+
+      # Modifying column names
+      labels <- d[1, ][seq(1, n.col, by = 2)]
+      colnames(d) <- paste(rep(labels, each = 2),
+                           rep(c('emission', 'intensity'), n.col/2),
+                           sep = '_')
+      colnames(d) <- paste(colnames(d), 1:n.col, sep = 'X')
+
+      # Dropping first row headers   
+      d <- d[-1, ]
+
+      # Gathering all columns and filtering empty values
+      d$row <- 1:(n.row - 2)
+      m <- gather(d, id, value, -row) %>%
+             mutate(id = gsub('X\\d+', '', id)) %>%
+             filter(value != '') %>%
+             separate(id, into = c('id', 'variable'), sep = '(?<=\\d)_(?=[ei])')
+
+      n.meta <- meta %>% 
+                  group_by(scan) %>%
+                  mutate(n = ((stop - start)/data.interval + 1)*2)
+
+      qualifiers <- meta[rep(1:nrow(meta), n.meta$n), 
+                         c('sample', 'cell', 'scan', 'label',
+                           'excitation.wavelength')]
+
+      m <- cbind(qualifiers, m) %>%
+             spread(variable, value)
+
     }
-    d <- d[, 1:n.col]
-    
-    # Dropping second row headers
-    d <- d[-2, ] 
 
-    # Modifying column names
-    labels <- d[1, ][seq(1, n.col, by = 2)]
-    colnames(d) <- paste(rep(labels, each = 2),
-                         rep(c('emission', 'intensity'), n.col/2),
-                         sep = '_')
-
-    # Dropping first row headers   
-    d <- d[-1, ]
-
-    # Gathering all columns and filtering empty values
-    d$row <- 1:(n.row - 2)
-    m <- gather(d, id, value, -row) %>%
-           filter(value != '') %>%
-           separate(id, into = c('id', 'variable'), sep = '(?<=\\d)_(?=[ei])')
-
-    n.meta <- meta %>% 
-                group_by(scan) %>%
-                mutate(n = ((stop - start)/data.interval + 1)*2)
-
-    qualifiers <- meta[rep(1:nrow(meta), n.meta$n), 
-                       c('sample', 'cell', 'scan', 'label',
-                         'excitation.wavelength')]
-
-    m <- cbind(qualifiers, m) %>%
-           select(-id) %>%
-           spread(variable, value) %>%
-           select(-row, excitation = excitation.wavelength)
+    m <- m %>%
            mutate(emission = as.numeric(emission),
-                  intensity = as.numeric(intensity))
+                  intensity = as.numeric(intensity)) %>%
+           select(sample, cell, scan, label, 
+                  excitation = excitation.wavelength, emission, intensity)
 
     out <- rbind(out, m)
   }
