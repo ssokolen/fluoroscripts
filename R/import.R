@@ -62,7 +62,7 @@ import_metadata <- function(filename, aggregate = FALSE, cache = FALSE) {
     skip.extra <- 0
     d <- data.frame()
     dates <- c()
-
+    
     # Row format requires an offset depending on how csv was generated
     if (str_detect(d.string[[1]], 'Z Axis')) {
       k <- 0
@@ -118,10 +118,17 @@ import_metadata <- function(filename, aggregate = FALSE, cache = FALSE) {
 
     colnames(d) <- all.columns
 
+    # Modifying PMT voltages to always be numeric
+    d <- mutate(d,
+                pmt.voltage = gsub('Low', '400', pmt.voltage),
+                pmt.voltage = gsub('Medium', '600', pmt.voltage),
+                pmt.voltage = gsub('High', '800', pmt.voltage))
+    print(d$pmt.voltage)
+
     numeric.columns <- c('scan', 'time', 'start', 'stop', 
                          'excitation.wavelength', 'excitation.slit', 
                          'emission.slit', 'scan.rate', 'data.interval', 
-                         'averaging.time', 'excitation.stop',
+                         'pmt.voltage', 'averaging.time', 'excitation.stop',
                          'excitation.increment')
 
     for (column in numeric.columns) {
@@ -135,13 +142,14 @@ import_metadata <- function(filename, aggregate = FALSE, cache = FALSE) {
   out <- arrange(out, time)
 
   row <- 1
-  cells <- c()
-  samples <- c()
-  min.sample <- 0
+  current.sample <- 0
   
+  out$cell <- 0
+  out$sample <- 0
+
   while (TRUE) {
     if (row >= nrow(out)) break
-
+    
     n.cells <- 0
     while (TRUE) {
       current <- out$excitation.wavelength[row + n.cells] 
@@ -153,18 +161,33 @@ import_metadata <- function(filename, aggregate = FALSE, cache = FALSE) {
         break
       }
     }
-    n.scans <- (out$stop[row] - out$start[row])/
-               out$excitation.increment[row] + 1
-    
-    cells <- c(cells, rep(1:n.cells, n.scans))
-    samples <- c(samples, min.sample +  rep(1:n.cells, n.scans))
 
-    min.sample <- min.sample + n.cells
+    cells <- 1:n.cells
+    index <- 1
 
-    row <- row + n.cells*n.scans
+    while (TRUE) {
+
+      out$cell[row] <- cells[index]
+      out$sample[row] <- current.sample + cells[index]
+
+      row <- row + 1
+     
+      if (row >= nrow(out)) break
+      if (out$excitation.wavelength[row + 1] < out$excitation.wavelength[row]) {
+        break
+      }
+
+      if (index == n.cells) {
+        index <- 1
+      } else {
+      index <- index + 1
+      }
+    }
+
+    row <- row + 1
+
+    current.sample <- current.sample + n.cells
   }
-
-  out <- cbind(sample = samples, cell = cells, out)
 
   if (aggregate) {
     agg.columns <- c('cell', 'label', 'date', 'time', 'instrument', 'serial', 
