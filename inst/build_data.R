@@ -1,5 +1,4 @@
-#' Script to generate data supplied with the package.
-#' @nord
+# Script to generate data supplied with the package.
 
 library(dplyr)
 library(tidyr)
@@ -27,7 +26,7 @@ for (file in spectra.files) {
     f_extrapolate <- function(x) {
       low <- min(d$wavelength)
       high <- max(d$wavelength)
-      out <- ifelse((x > low) || (x < high), f_interpolate(x), 0)
+      out <- ifelse((x > low) & (x < high), f_interpolate(x), 0)
       return(out)
     }
 
