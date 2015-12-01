@@ -21,7 +21,6 @@ for (file in spectra.files) {
     colnames(d) <- c('wavelength', 'intensity')
 
     d <- filter(d, !is.na(wavelength))
-    d <- mutate(d, intensity = ifelse(intensity < 0, 0, intensity))
 
     f_interpolate <- splinefun(d$wavelength, d$intensity)
     f_extrapolate <- function(x) {
@@ -33,6 +32,7 @@ for (file in spectra.files) {
 
     x <- seq(300, 800, length.out = 200)
     y <- f_extrapolate(x)
+    y[y < 0] <- 0
 
     # Ensuring a scale of to 0-1
     y <- (y - min(y))/(max(y) - min(y))
