@@ -68,9 +68,21 @@ protein.spectra <- left_join(protein.spectra,
                              protein.summary[, c('protein', 'brightness')], 
                              by = 'protein')
 
+f_scale <- function(wavelength, intensity, brightness) {
+  f <- approxfun(wavelength, intensity)
+  index = 2:length(wavelength)
+  area <- sum( (intensity[index] + intensity[index - 1]) *    
+               (wavelength[index] - wavelength[index-1]) ) / 2  
+  out <- intensity / area * brightness
+  return(out)
+}
+
 protein.spectra <- protein.spectra %>%
-                     mutate(excitation = brightness * r.excitation,
-                     emission = brightness * r.emission) %>%
+                     group_by(protein) %>%
+                     mutate(excitation = f_scale(wavelength, r.excitation,
+                                                 brightness),
+                            emission = f_scale(wavelength, r.emission,
+                                                 brightness)) %>%
                      select(-brightness)
 
 save(protein.spectra, file = 'protein_spectra.RData')
