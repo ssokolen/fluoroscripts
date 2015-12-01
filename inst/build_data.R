@@ -21,6 +21,7 @@ for (file in spectra.files) {
     colnames(d) <- c('wavelength', 'intensity')
 
     d <- filter(d, !is.na(wavelength))
+    d <- mutate(d, intensity = ifelse(intensity < 0, 0, intensity))
 
     f_interpolate <- splinefun(d$wavelength, d$intensity)
     f_extrapolate <- function(x) {
