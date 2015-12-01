@@ -158,10 +158,21 @@ calculate_pairwise_overlap <- function(wavelengths, excitations, emissions,
                                        proteins, lasers, channels, 
                                        threshold = 1e-2) {
 
-  # Generating data frame and calculating areas
+  # Generating data frame
   d <- data.frame(protein = proteins, wavelength = wavelengths,
                   excitation = excitations, emission = emissions)
 
+  # Ordering by wavelength
+  d.max <- d %>%
+             group_by(protein) %>%
+             summarize(wavelength = wavelength[emission == max(emission)]) %>%
+             arrange(wavelength)
+
+  d$protein <- factor(as.character(d$protein), 
+                    levels = as.character(d.max$protein))
+  d <- arrange(d, protein)
+
+  # Calculating areas
   areas <- d %>%
              group_by(protein) %>%
              do(calculate_area(.$wavelength, .$excitation, .$emission,
@@ -235,10 +246,21 @@ calculate_max_overlap <- function(wavelengths, excitations, emissions,
     stop(msg)
   }
 
-  # Generating data frame and calculating areas
+  # Generating data frame
   d <- data.frame(protein = proteins, wavelength = wavelengths,
                   excitation = excitations, emission = emissions)
 
+  # Ordering by wavelength
+  d.max <- d %>%
+             group_by(protein) %>%
+             summarize(wavelength = wavelength[emission == max(emission)]) %>%
+             arrange(wavelength)
+
+  d$protein <- factor(as.character(d$protein), 
+                    levels = as.character(d.max$protein))
+  d <- arrange(d, protein)
+
+  # Calculating areas
   areas <- d %>%
              group_by(protein) %>%
              do(calculate_area(.$wavelength, .$excitation, .$emission,
@@ -254,6 +276,7 @@ calculate_max_overlap <- function(wavelengths, excitations, emissions,
                select(protein1 = protein, protein2, 
                       channel, area1 = area, area2) %>%
                filter(protein1 != protein2) %>%
+               ungroup() %>%
                mutate(overlap = ifelse(area1 > 0, area2/area1, NA)) %>%
                select(-area1, -area2)
 
