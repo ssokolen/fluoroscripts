@@ -14,6 +14,9 @@ plot_emissions(wavelengths, excitations, emissions, proteins, lasers,
 
 \item{emissions}{A vector of emmision intensities.}
 
+\item{proteins}{A vector of protein labels that correspond to each
+measurement.}
+
 \item{lasers}{Vector of lasers exciting given proteins e.g. c(488, 642)}
 
 \item{channels}{Optional vector of channels to highlight
@@ -23,9 +26,6 @@ e.g. c('530/30', '670LP').}
 spectra are coloured by emission wavelength.}
 
 \item{background.alpha}{Transparency value for channel highlight.}
-
-\item{protein}{A vector of protein labels that correspond to each
-measurement.}
 }
 \value{
 ggplot2 plot object.

@@ -2,6 +2,8 @@
 
 export(calculate_area)
 export(calculate_colours)
+export(calculate_max_overlap)
+export(calculate_pairwise_overlap)
 export(calculate_ranges)
 export(import_data)
 export(import_metadata)

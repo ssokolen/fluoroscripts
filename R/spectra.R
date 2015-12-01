@@ -53,7 +53,7 @@ calculate_ranges <- function(channels, min.wavelength, max.wavelength) {
 # Functions relating areas under spectral curves
 
 #------------------------------------------------------------------------
-#' Calculate area of spectral curve
+#' Calculate area under spectral curve
 #'
 #' Calculates the area under an emission spectra within specified channels,
 #' excited by given laser wavelength. The output is a dataframe to
@@ -120,6 +120,205 @@ calculate_area <- function(wavelengths, excitations, emissions, lasers,
   
   # Filtering out values below the threshold 
   out <- mutate(out, area = ifelse(area/total.area < threshold, 0, area))
+
+  return(out)
+}
+
+#------------------------------------------------------------------------
+#' Calculate overlap between proteins
+#'
+#' Calculates the overlaps in area under an emission spectra between all
+#' proteins. Areas are calculated by taking into account the specified 
+#' channels, and excitation by given laser wavelength. Overlap is reported
+#' as a fraction of area of specified protein. As an example the overlap
+#' of EGFP by EYFP will likely be different from the overlap of EYFP by EGFP.
+#' An overlap of NA means that the area of specified protein is 0 for the
+#' given channel (and would result in division by 0). An overlap of 0 means
+#' that the relative area of overlapping proteins is practically 0.
+#
+#' @param wavelengths A vector of wavelengths (nm).
+#' @param excitations A vector of excitation intensities.
+#' @param emissions A vector of emmision intensities.
+#' @param proteins A vector of protein labels that correspond to each
+#'                 measurement.
+#' @param lasers Vector of lasers exciting given proteins e.g. c(488, 642).
+#' @param channels Vector of channels for which spectral area is calculated
+#'                 e.g. c('530/30', '670LP').
+#' @param threshold Fraction of total spectral area observed in a given
+#'                  channel that is considered to be practically 0.
+#
+#' @return A data frame with four columns -- protein1, protein2, channel 
+#'         and overlap. Overlap represents the fraction of protein1 area
+#'         occupied by protein2 in a given channel.
+#' @export
+#'
+#------------------------------------------------------------------------
+# Calculating channel area
+calculate_pairwise_overlap <- function(wavelengths, excitations, emissions, 
+                                       proteins, lasers, channels, 
+                                       threshold = 1e-2) {
+
+  # Generating data frame and calculating areas
+  d <- data.frame(protein = proteins, wavelength = wavelengths,
+                  excitation = excitations, emission = emissions)
+
+  areas <- d %>%
+             group_by(protein) %>%
+             do(calculate_area(.$wavelength, .$excitation, .$emission,
+                               lasers = lasers, channels = channels, 
+                               threshold = threshold))
+
+  # Generating a Cartesian product
+  areas$id <- 1
+  areas2 <- rename(areas, protein2 = protein, area2 = area)
+ 
+  # Calculating overlap 
+  combined <- left_join(areas, areas2, by = c('id', 'channel')) %>%
+                select(protein1 = protein, protein2, 
+                       channel, area1 = area, area2) %>%
+                filter(protein1 != protein2) %>%
+                mutate(overlap = ifelse(area1 > 0, area2/area1, NA)) %>%
+                select(-area1, -area2)
+
+  return(combined)
+}
+
+#------------------------------------------------------------------------
+#' Calculate worst-case overlap between combination of proteins
+#'
+#' Calculates the overlaps in area under an emission spectra between all
+#' proteins. Areas are calculated by taking into account the specified 
+#' channels, and excitation by given laser wavelength. All combination
+#' of proteins are assessed to determine worst case overlap of one protein
+#' with all others in any given channel. Each protein is assigned one
+#' channel for quantification, with the channels picked in order of least
+#' overlap. 
+#
+#' @param wavelengths A vector of wavelengths (nm).
+#' @param excitations A vector of excitation intensities.
+#' @param emissions A vector of emmision intensities.
+#' @param proteins A vector of protein labels that correspond to each
+#'                 measurement.
+#' @param n The number of protein combinations to consider.
+#' @param lasers Vector of lasers exciting given proteins e.g. c(488, 642).
+#' @param channels Vector of channels for which spectral area is calculated
+#'                 e.g. c('530/30', '670LP').
+#' @param spectra.threshold Fraction of total spectral area observed in a 
+#'                          given channel that is considered to be 
+#'                          practically 0.
+#' @param channel.threshold Fraction of maximum area observed within a given
+#'                          channel that is considered to be practically 0
+#'                          (compared to selected protein subset).
+#' @param overall.threshold Fraction of maximum area observed across all 
+#'                          channels that is considered to be practically 0
+#'                          (compared to selected protein subset).
+#
+#' @return A data frame with two columns -- channel and area.
+#' @export
+#'
+#------------------------------------------------------------------------
+# Calculating channel area
+calculate_max_overlap <- function(wavelengths, excitations, emissions, 
+                                  proteins, n, lasers, channels, 
+                                  spectra.threshold = 1e-2, 
+                                  intensity.threshold = 1e-2) {
+
+  # Checking input
+  if (n > length(channels)) {
+    msg <- 'Number of proteins (n) must not exceed number of channels.'
+    stop(msg)
+  }
+
+  # Checking input
+  if (n <= 1) {
+    msg <- 'Number of proteins (n) must be 2 or greater.'
+    stop(msg)
+  }
+
+  # Generating data frame and calculating areas
+  d <- data.frame(protein = proteins, wavelength = wavelengths,
+                  excitation = excitations, emission = emissions)
+
+  areas <- d %>%
+             group_by(protein) %>%
+             do(calculate_area(.$wavelength, .$excitation, .$emission,
+                               lasers = lasers, channels = channels, 
+                               threshold = spectra.threshold))
+
+  # Generating a Cartesian product
+  areas$id <- 1
+  areas2 <- rename(areas, protein2 = protein, area2 = area)
+ 
+  # Calculating overlap 
+  overlap <- left_join(areas, areas2, by = c('id', 'channel')) %>%
+               select(protein1 = protein, protein2, 
+                      channel, area1 = area, area2) %>%
+               filter(protein1 != protein2) %>%
+               mutate(overlap = ifelse(area1 > 0, area2/area1, NA)) %>%
+               select(-area1, -area2)
+
+  # Combinations
+  out <- t(combn(unique(as.character(areas$protein)), n))
+  out <- as.data.frame(out)
+  colnames(out) <- paste('protein', 1:n, sep = '')
+  
+  proteins <- paste('protein', 1:n, sep = '')
+  out <- cbind(out, unite_(out, 'combination', proteins, sep = '-'))
+  out$overlap <- NA
+  out$detection <- NA
+
+  for (col in proteins) {
+    out[, col] <- as.character(out[, col])
+  }
+
+  # Looping through each combination
+  for (i in 1:nrow(out)) {
+    combination <- as.character(out[i, proteins])
+    s.areas <- filter(areas, protein %in% combination)
+
+    # Filtering proteins by relative intensity across all channels
+    area.sums <- s.areas %>%
+                   group_by(protein) %>%
+                   summarize(area = sum(area))
+    max.area <- max(area.sums$area)
+
+    s.areas <- filter(area.sums, area > intensity.threshold * max.area)
+
+    # Skip iteration if any proteins are dropped
+    if (length(area.sums$protein) < n) next
+
+    # Subsetting overlaps
+    s.overlap <- filter(overlap, protein1 %in% combination, 
+                                 protein2 %in% combination)
+    
+    # Calculating overlap sums 
+    overlap.sums <- s.overlap %>%
+                      group_by(protein1, channel) %>%
+                      summarize(overlap = sum(overlap)) %>%
+                      ungroup() %>%
+                      arrange(overlap) %>%
+                      mutate(channel = as.character(channel),
+                             protein = as.character(protein1))
+
+    overlaps <- c()
+    chosen.proteins <- c()
+    chosen.channels <- c()
+
+    for (j in 1:n) {
+      overlaps <- c(overlaps, overlap.sums$overlap[1])
+      chosen.proteins <- c(chosen.proteins, overlap.sums$protein[1])
+      chosen.channels <- c(chosen.channels, overlap.sums$channel[1])
+      
+      overlap.sums <- filter(overlap.sums, 
+                             !channel %in% chosen.channels, 
+                             !protein %in% chosen.proteins) 
+    }
+
+    out$overlap[i] <- max(overlaps)
+    out$detection[i] <- paste(chosen.proteins, chosen.channels, 
+                              round(overlaps, 2),
+                              sep = '-', collapse = ', ')
+  }
 
   return(out)
 }

@@ -2,7 +2,7 @@
 % Please edit documentation in R/spectra.R
 \name{calculate_area}
 \alias{calculate_area}
-\title{Calculate area of spectral curve}
+\title{Calculate area under spectral curve}
 \usage{
 calculate_area(wavelengths, excitations, emissions, lasers, channels,
   threshold = 0.01)

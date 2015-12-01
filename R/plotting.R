@@ -47,8 +47,8 @@ calculate_colours <- function(wavelengths) {
 #' @param wavelengths A vector of wavelengths (nm).
 #' @param excitations A vector of excitation intensities.
 #' @param emissions A vector of emmision intensities.
-#' @param protein A vector of protein labels that correspond to each
-#'                measurement.
+#' @param proteins A vector of protein labels that correspond to each
+#'                 measurement.
 #' @param lasers Optional vector of lasers to highlight e.g. c(488, 642)
 #' @param channels Optional vector of channels to highlight 
 #'                e.g. c('530/30', '670LP').
@@ -122,8 +122,8 @@ plot_spectra <- function(wavelengths, excitations, emissions, proteins,
 #' @param wavelengths A vector of wavelengths (nm).
 #' @param excitations A vector of excitation intensities.
 #' @param emissions A vector of emmision intensities.
-#' @param protein A vector of protein labels that correspond to each
-#'                measurement.
+#' @param proteins A vector of protein labels that correspond to each
+#'                 measurement.
 #' @param lasers Vector of lasers exciting given proteins e.g. c(488, 642)
 #' @param channels Optional vector of channels to highlight 
 #'                e.g. c('530/30', '670LP').
