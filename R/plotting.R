@@ -136,7 +136,7 @@ plot_spectra <- function(wavelengths, excitations, emissions, proteins,
 #' @export
 #'
 plot_emissions <- function(wavelengths, excitations, emissions, proteins, 
-                           lasers, channels = NA, palette = NA, size = NA, 
+                           lasers, channels = NA, palette = NA, size = NULL, 
                            background.alpha = 0.1) {
 
   # Generating dataframe and scaling by excitation 
