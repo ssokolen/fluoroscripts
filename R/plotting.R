@@ -60,7 +60,7 @@ calculate_colours <- function(wavelengths) {
 #' @export
 #'
 plot_spectra <- function(wavelengths, excitations, emissions, proteins, 
-                         lasers = NA, channels = NA, palette = NA, 
+                         lasers = NA, channels = NA, palette = NA,
                          background.alpha = 0.1) {
 
   # Generating dataframe 
@@ -129,13 +129,14 @@ plot_spectra <- function(wavelengths, excitations, emissions, proteins,
 #'                e.g. c('530/30', '670LP').
 #' @param palette Name of colorbrewer palette for discrete scale (if NA,
 #'                spectra are coloured by emission wavelength.
+#' @param size Line size for emission spectra.
 #' @param background.alpha Transparency value for channel highlight. 
 #
 #' @return ggplot2 plot object.
 #' @export
 #'
 plot_emissions <- function(wavelengths, excitations, emissions, proteins, 
-                           lasers, channels = NA, palette = NA, 
+                           lasers, channels = NA, palette = NA, size = NA, 
                            background.alpha = 0.1) {
 
   # Generating dataframe and scaling by excitation 
@@ -180,7 +181,7 @@ plot_emissions <- function(wavelengths, excitations, emissions, proteins,
                         colour = calculate_colours(lasers[i]))
   }
 
-  p <- p + geom_line()
+  p <- p + geom_line(size = size)
 
   if (is.na(palette)) {
     values <- calculate_colours(d.max$wavelength)

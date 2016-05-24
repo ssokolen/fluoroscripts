@@ -4,5 +4,6 @@ Version: 0.2
 Authors@R: person("Stanislav", "Sokolenko", email = "stanislav@sokolenko.net", role = c("aut", "cre"))
 Description: A collection of scripts for working with fluorescence data. Currently, this collections includes routines for loading data from a Cary Eclipse Spectrophotometer, processing it into long format, and plotting it as well as choosing optimum fluorescent proteins for flow cytometry analysis. 
 Depends: R (>= 3.2.2), dplyr (>= 0.4.2), ggplot2 (>= 1.0.1), stringr (>= 1.0.0), tidyr (>= 0.2.0)
+Imports: signal (>= 0.7-6)
 License: Apache (>= 2.0)
 LazyData: true
