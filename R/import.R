@@ -1,6 +1,55 @@
 # Functions for importing data
 
 #========================================================================>
+# Misc functions
+
+# Check specified filename glob
+check_glob <- function(filename) {
+
+  files <- Sys.glob(filename)
+  if (length(files) == 0) {
+    msg = sprintf('No files matching "%s"', filename)
+    stop(msg)
+  }
+
+  return(files)
+}
+
+# Match instrument type
+match_instrument <- function(instrument) {
+
+  if (length(instrument) > 1) {
+    msg = 'Instrument name must be provided as a single string'
+    stop(msg)
+  }
+
+  # Trimming terminal whitespace
+  instrument = str_trim(instrument)
+
+  patterns = c('cary' = '[cC]ary\\s*(?=($|([eE]clipse$)))',
+               'synergy4' = '(?<=^|([bB]io[tT]ek))\\s*[sS]ynergy\\s*4')
+
+  matches = str_detect(instrument, patterns)
+
+  valid_names <- c('Cary Eclipse', 'BioTek Synergy 4')
+  valid_string <- paste(valid_names, collapse = ', ')
+
+  if (sum(matches) == 2) {
+    msg = sprintf('Ambiguous instrument name. Supported instruments:\n\t%s',
+                   valid_string)
+    stop(msg)
+  }
+  else if (sum(matches) == 0) {
+    msg = sprintf('Invalid instrument name. Supported instruments:\n\t%s',
+                   valid_string)
+    stop(msg)
+  }
+  else {
+    return(names(patterns)[matches])
+  }
+}
+
+#========================================================================>
 # Importing
 
 #------------------------------------------------------------------------
@@ -14,9 +63,6 @@
 #' @param aggregate TRUE if metadata should be reported per sample
 #'                  (aggregating across the excitation sweep) or per single
 #'                  scan.
-#' @param cache TRUE to cache processed files. Processed files are
-#'		recorded by a hash of their contents, ignoring file names
-#'		and ensuring a new import if contents change. [NOT IMPLEMENTED]
 #
 #' @return A data.frame with columns of scan parameters.
 #'
@@ -24,14 +70,9 @@
 #' # To do
 #' @export
 
-import_metadata <- function(filename, aggregate = FALSE, cache = FALSE) {
+import_cary_meta <- function(filename, aggregate = FALSE) {
 
-  # Parsing filename pattern
-  files <- Sys.glob(filename)
-  if (length(files) == 0) {
-    msg = sprintf('No files matching "%s"', filename)
-    stop(msg)
-  }
+  files <- check_glob(filename) 
 
   # Initializing output
   options(stringsAsFactors = FALSE)
@@ -215,9 +256,6 @@ import_metadata <- function(filename, aggregate = FALSE, cache = FALSE) {
 #' converts it into long format.
 #'
 #' @param filename Filename or pattern for matching multiple filenames.
-#' @param cache TRUE to cache processed files. Processed files are
-#'		recorded by a hash of their contents, ignoring file names
-#'		and ensuring a new import if contents change. [NOT IMPLEMENTED]
 #
 #' @return A data.frame with the following columns: sample, cell, scan,
 #'         label, excitation, emission, intensity
@@ -226,14 +264,9 @@ import_metadata <- function(filename, aggregate = FALSE, cache = FALSE) {
 #' # To do
 #' @export
 
-import_data <- function(filename, cache = FALSE) {
+import_cary_data <- function(filename) {
 
-  # Parsing filename pattern
-  files <- Sys.glob(filename)
-  if (length(files) == 0) {
-    msg = sprintf('No files matching "%s"', filename)
-    stop(msg)
-  }
+  files <- check_glob(filename)
 
   # Getting metadata first
   meta <- import_metadata(filename)
@@ -351,3 +384,74 @@ import_data <- function(filename, cache = FALSE) {
 
   return(out)
 }
+
+
+
+#========================================================================>
+# Generic functions
+
+#------------------------------------------------------------------------
+#' Import sample description metadata from spectrophotometer output.
+#'
+#' Imports sample description metadata from exported output and converts it 
+#' into long format. Import procedure depends on specified instrument. 
+#' [This function is a placeholder as only Cary Eclipse import is currently
+#' supported]. Calls import_cary_meta().
+#'
+#' @param filename Filename or pattern for matching multiple filenames.
+#' @param instrumet String specifying instrument. Currently limited to
+#'                  'Cary Eclipse' or 'cary'.
+#' @param ... Arguments passed to specific instrument import functions.
+#
+#' @return A data.frame with columns of scan parameters.
+#'
+#' @examples
+#' # To do
+#' @export
+
+import_meta <- function(filename, instrument = 'cary', ...) {
+
+  instrument = match_instrument(instrument)
+
+  functions <- c('cary' = 'import_cary_meta')
+
+  if (!instrument %in% names(functions)) {
+    msg = 'Metadata input for this instrument is not supported'
+    stop(msg)
+  }
+
+  do.call(functions[instrument], c(list(filename = filename), list(...)))
+} 
+
+#------------------------------------------------------------------------
+#' Import numeric data from spectrophotometer output.
+#'
+#' Imports numeric data from exported output and converts it 
+#' into long format. Import procedure depends on specified instrument. 
+#' Calls import_cary_data() or import_synergy4_data().
+#'
+#' @param filename Filename or pattern for matching multiple filenames.
+#' @param instrumet String specifying instrument. Currently limited to
+#'                  'Cary Eclipse' or 'cary', 'BioTek Synergy 4' or 
+#'                  'synergy4'.
+#' @param ... Arguments passed to specific instrument import functions.
+#
+#' @return A data.frame with columns of scan parameters.
+#'
+#' @examples
+#' # To do
+#' @export
+
+import_meta <- function(filename, instrument = 'cary', ...) {
+
+  instrument = match_instrument(instrument)
+
+  functions <- c('cary' = 'import_cary_data')
+
+  if (!instrument %in% names(functions)) {
+    msg = 'Numeric data input for this instrument is not supported'
+    stop(msg)
+  }
+
+  do.call(functions[instrument], c(list(filename = filename), list(...)))
+} 
