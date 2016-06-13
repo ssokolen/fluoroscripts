@@ -385,7 +385,79 @@ import_cary_data <- function(filename) {
   return(out)
 }
 
+#------------------------------------------------------------------------
+#' Import numeric data from table output of BioTek Synergy 4 
+#'
+#' Imports numeric table output from a BioTek Synergy 4 Spectrophotometer and 
+#' converts it into long format.
+#'
+#' @param filename Filename or pattern for matching multiple filenames.
+#
+#' @return A data.frame with the following columns: filename, read, 
+#'         well, row, column, excitation, emission, intensity
+#'
+#' @examples
+#' # To do
+#' @export
 
+import_synergy4_data <- function(filename) {
+
+  files <- check_glob(filename)
+
+  # Initializing output
+  out <- data.frame()
+
+  # Looping through each file
+  for (file in files) {
+
+    # Reading file as string
+    d.lines <- readLines(file)
+    d.string <- paste(d.lines, collapse = '\n')
+    
+    # Splitting headers and content
+    locations <- str_locate_all(d.string, '(?<=^|(\n\n)).+(?=\n\n)')[[1]]
+    headers <- substring(d.string, locations[, 1], locations[, 2])
+
+    content <- str_split(d.string, '(?<=^|(\n\n)).+(?=\n\n)')[[1]][-1]
+    content <- str_trim(content)
+
+    # Matching headers of interest
+    table_matches <- str_detect(headers, 'Read \\d+:.+ Spectrum')
+    table_headers <- headers[table_matches]
+    table_content <- content[table_matches]
+
+    # Looping through read tables
+    for (i in 1:length(table_headers)) {
+      header <- table_headers[i]
+      read <- as.numeric(str_extract(header, '(?<=Read )\\d+'))
+      d <- read_delim(table_content[i], '\t') %>%
+           gather('well', 'intensity', -Wavelength) %>%
+           mutate(filename = basename(file),
+                  read = read,
+                  temp = well,
+                  Wavelength = as.numeric(str_replace(
+                                 Wavelength, 'nm', ''))) %>%
+           separate(temp, c('row', 'column'), sep = '(?<=\\D)') %>%
+           mutate(column = as.numeric(column))
+
+      if (str_detect(header, 'EM')) {
+        d <- rename(d, emission = Wavelength)
+        d$excitation <- NA
+      }
+      else {
+        d <- rename(d, excitation = Wavelength)
+        d$emission <- NA
+      }
+
+      d <- select(d, filename, read, well, row, column,
+                     excitation, emission, intensity)
+
+      out <- rbind(out, d)
+    }
+  } 
+
+  return(out)
+}
 
 #========================================================================>
 # Generic functions
@@ -442,11 +514,12 @@ import_meta <- function(filename, instrument = 'cary', ...) {
 #' # To do
 #' @export
 
-import_meta <- function(filename, instrument = 'cary', ...) {
+import_data <- function(filename, instrument = 'cary', ...) {
 
   instrument = match_instrument(instrument)
 
-  functions <- c('cary' = 'import_cary_data')
+  functions <- c('cary' = 'import_cary_data',
+                 'synergy4' = 'import_synergy4_data')
 
   if (!instrument %in% names(functions)) {
     msg = 'Numeric data input for this instrument is not supported'
