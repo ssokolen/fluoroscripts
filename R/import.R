@@ -164,7 +164,6 @@ import_cary_meta <- function(filename, aggregate = FALSE) {
                 pmt.voltage = gsub('Low', '400', pmt.voltage),
                 pmt.voltage = gsub('Medium', '600', pmt.voltage),
                 pmt.voltage = gsub('High', '800', pmt.voltage))
-    print(d$pmt.voltage)
 
     numeric.columns <- c('scan', 'time', 'start', 'stop', 
                          'excitation.wavelength', 'excitation.slit', 
@@ -175,6 +174,9 @@ import_cary_meta <- function(filename, aggregate = FALSE) {
     for (column in numeric.columns) {
       d[, column] <- as.numeric(d[, column])
     }
+
+    # Adding filename
+    d$filename <- basename(file)
 
     out <- rbind(out, d)
   }
@@ -246,6 +248,8 @@ import_cary_meta <- function(filename, aggregate = FALSE) {
     out <- group_by(out, sample) %>% do(f_aggregate(.))
   }
 
+  out <- select(out, filename, everything())
+
   return(out)
 }
 
@@ -257,8 +261,8 @@ import_cary_meta <- function(filename, aggregate = FALSE) {
 #'
 #' @param filename Filename or pattern for matching multiple filenames.
 #
-#' @return A data.frame with the following columns: sample, cell, scan,
-#'         label, excitation, emission, intensity
+#' @return A data.frame with the following columns: filename, 
+#'         sample, cell, scan, label, excitation, emission, intensity
 #'
 #' @examples
 #' # To do
@@ -268,14 +272,14 @@ import_cary_data <- function(filename) {
 
   files <- check_glob(filename)
 
-  # Getting metadata first
-  meta <- import_metadata(filename)
-
   # Initializing output
   out <- data.frame()
 
   # Looping through each file
   for (file in files) {
+
+    # Getting metadata first
+    meta <- import_cary_meta(file)
 
     # Reading file as string
     d.string <- readLines(file)
@@ -314,7 +318,8 @@ import_cary_data <- function(filename) {
 
       # Gathering all columns and filtering empty values
       m <- gather(d, id, intensity, -emission) %>%
-             mutate(id = gsub('X\\d+', '', id)) %>%
+             mutate(id = gsub('X\\d+', '', id),
+                    filename = basename(file)) %>%
              filter(intensity != '')
 
       n.meta <- meta %>% 
@@ -360,13 +365,16 @@ import_cary_data <- function(filename) {
              filter(value != '') %>%
              separate(id, into = c('id', 'variable'), sep = '(?<=\\d)_(?=[ei])')
 
-      n.meta <- meta %>% 
+      n.meta <- meta %>%
                   group_by(scan) %>%
                   mutate(n = ((stop - start)/data.interval + 1)*2)
 
       qualifiers <- meta[rep(1:nrow(meta), n.meta$n), 
                          c('sample', 'cell', 'scan', 'label',
                            'excitation.wavelength')]
+
+      print(class(qualifiers))
+      print(class(m))
 
       m <- cbind(qualifiers, m) %>%
              spread(variable, value)
@@ -375,8 +383,9 @@ import_cary_data <- function(filename) {
 
     m <- m %>%
            mutate(emission = as.numeric(emission),
-                  intensity = as.numeric(intensity)) %>%
-           select(sample, cell, scan, label, 
+                  intensity = as.numeric(intensity),
+                  filename = basename(file)) %>%
+           select(filename, sample, cell, scan, label, 
                   excitation = excitation.wavelength, emission, intensity)
 
     out <- rbind(out, m)
