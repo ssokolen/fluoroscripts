@@ -10,6 +10,7 @@ Depends:
     R (>= 3.2.2),
     dplyr (>= 0.4.2),
     ggplot2 (>= 1.0.1),
+    reshape2 (>= 1.4.1),
     stringr (>= 1.0.0),
     tidyr (>= 0.2.0)
 Imports:
