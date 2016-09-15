@@ -5,7 +5,7 @@
 \title{Plot emission spectra as excited by specified laser.}
 \usage{
 plot_emissions(wavelengths, excitations, emissions, proteins, lasers,
-  channels = NA, palette = NA, size = NULL, background.alpha = 0.1)
+  channels = NA, palette = NA, size = 2, background.alpha = 0.1)
 }
 \arguments{
 \item{wavelengths}{A vector of wavelengths (nm).}

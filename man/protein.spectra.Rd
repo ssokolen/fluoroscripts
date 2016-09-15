@@ -4,12 +4,14 @@
 \name{protein.spectra}
 \alias{protein.spectra}
 \title{Spectral information of selected fluorescent proteins.}
-\format{A data frame with 5600 rows and 4 variables. 
+\format{A data frame with 4800 rows and 6 variables. 
 \describe{
    \item{protein}{Name of protein}
    \item{wavelength}{Wavelength in nm}
-   \item{excitation}{Relative excitation curve scaled to range of 0-1}
-   \item{emission}{Relative emission curve scaled to range of 0-1}
+   \item{r.excitation}{Relative excitation curve scaled to range of 0-1}
+   \item{r.emission}{Relative emission curve scaled to range of 0-1}
+   \item{excitation}{Relative excitation curve multiplied by brightness}
+   \item{emission}{Relative emission curve multiplied by brightness}
 }}
 \usage{
 protein.spectra
