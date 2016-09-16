@@ -19,14 +19,9 @@ import_data(filename, instrument = "cary", ...)
 A data.frame with columns of scan parameters.
 }
 \description{
-<<<<<<< HEAD
 Imports numeric data from exported output and converts it 
 into long format. Import procedure depends on specified instrument. 
 Calls import_cary_data() or import_synergy4_data().
-=======
-Imports numeric csv output from a Cary Eclipse Spectrophotometer and 
-converts it into long format.
->>>>>>> shiny
 }
 \examples{
 # To do
