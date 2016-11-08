@@ -126,14 +126,15 @@ calculate_area <- function(wavelengths, excitations, emissions, lasers,
 #------------------------------------------------------------------------
 #' Calculate overlap between proteins
 #'
-#' Calculates the overlaps in area under an emission spectra between all
+#' Calculates the pairwise overlaps in area under an emission spectra between 
 #' proteins. Areas are calculated by taking into account the specified 
-#' channels, and excitation by given laser wavelength. Overlap is reported
-#' as a fraction of area of specified protein. As an example the overlap
-#' of EGFP by EYFP will likely be different from the overlap of EYFP by EGFP.
-#' An overlap of NA means that the area of specified protein is 0 for the
-#' given channel (and would result in division by 0). An overlap of 0 means
-#' that the relative area of overlapping proteins is practically 0.
+#' channels and excitation by given laser wavelength. Pairs are constructed
+#' from all combinations of the given proteins and overlap is reported
+#' as a fraction of the area of the second protein in a given pair. For example, 
+#' the overlap of EGFP by EYFP will likely be different from the overlap of 
+#' EYFP by EGFP. An overlap of NA means that the area of the second protein is
+#' 0 for the given channel (and would result in division by 0). An overlap of
+#' 0 means that the relative area of overlapping proteins is practically 0.
 #
 #' @param wavelengths A vector of wavelengths (nm).
 #' @param excitations A vector of excitation intensities.
@@ -167,7 +168,7 @@ calculate_pairwise_overlap <- function(wavelengths, excitations, emissions,
              arrange(wavelength)
 
   d$protein <- factor(as.character(d$protein), 
-                    levels = as.character(d.max$protein))
+                      levels = as.character(d.max$protein))
   d <- arrange(d, protein)
 
   # Calculating areas
@@ -261,7 +262,7 @@ assess_combinations <- function(wavelengths, excitations, emissions,
              arrange(wavelength)
 
   d$protein <- factor(as.character(d$protein), 
-                    levels = as.character(d.max$protein))
+                      levels = as.character(d.max$protein))
   d <- arrange(d, protein)
 
   # Calculating areas
