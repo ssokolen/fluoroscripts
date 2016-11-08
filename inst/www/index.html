@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Fluorolive test</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<!-- ocpu library -->
+<script src="jquery-3.1.1.js"> </script>
+<script src="opencpu-0.5.js"> </script>
+
+<script>
+//on page ready:
+$(function() {
+    var req = $("#plotdiv").rplot("iplot_spectra", {
+        proteins: ['EGFP', 'mAzamiGreen'],
+ 	lasers: [488],
+	channels: ['580/30']
+    }).fail(function(){
+    alert(req.responseText);
+  });
+});
+</script>
+
+<style>
+#plotdiv {
+  margin-left: 10px;
+  margin-top: 10px;
+  width: 900px;
+  height: 600px;
+  border: solid gray 1px;
+}
+</style>
+</head>
+
+<body>
+  
+  <h1>Fluorolive test</h1>
+  
+  <p>This is an example of a minimal OpenCPU app.</p>
+  
+  <div id="plotdiv"></div>
+  
+</body>
+</html>
