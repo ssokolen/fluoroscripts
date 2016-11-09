@@ -18,8 +18,8 @@
 fluorolive <- function(...) {
 
   if (!require('opencpu')) {
-    message <- 'The package "opencpu" needs to be installed for interactive plots'
-    error(message)
+    msg <- 'The package "opencpu" needs to be installed for interactive plots'
+    stop(msg)
   }
 
   opencpu$browse('/library/fluoroscripts/www', ...)
@@ -58,9 +58,31 @@ iplot_spectra <- function(proteins, lasers, channels, protein.colours = NA,
   lasers <- as.numeric(lasers)
   channel.ranges <- calculate_ranges(channels, 500, 800)
 
+  # Checking if all proteins are valid
+  not.valid <- !proteins %in% protein.spectra$protein
+  if (any(not.valid)) {
+    string <- "No spectra for the following proteins: %s" 
+    msg <- sprintf(string, paste(proteins[not.valid], collapse = ', '))
+    stop(msg)
+  }
+
+  # Checking whether we have all required brightness values
+  if (scale.brightness == TRUE) {
+    logic <- !is.na(protein.summary$brightness)
+    not.valid <- !proteins %in% protein.summary$protein[logic]
+
+    if (any(not.valid)) {
+      string <- "Brightness values not available for the following proteins: %s" 
+      msg <- sprintf(string, paste(proteins[not.valid], collapse = ', '))
+      stop(msg)
+    }
+  }
+
   # Initializing plot
   plot(0, type = 'n', xlab = 'Emission (nm)', ylab = 'Relative intensity',
        xlim = c(500, 800), ylim = c(0, 1))
+
+  # Adding channel blocks
 
   # Returning
   invisible()
