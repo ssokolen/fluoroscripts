@@ -10,19 +10,6 @@
 <script src="jquery-3.1.1.js"> </script>
 <script src="opencpu-0.5.js"> </script>
 
-<script>
-//on page ready:
-$(function() {
-    var req = $("#plotdiv").rplot("iplot_spectra", {
-        proteins: ['EGFP', 'mAzamiGreen'],
- 	lasers: [488],
-	channels: ['580/30']
-    }).fail(function(){
-    alert(req.responseText);
-  });
-});
-</script>
-
 <style>
 #plotdiv {
   margin-left: 10px;
@@ -39,6 +26,38 @@ $(function() {
   <h1>Fluorolive test</h1>
   
   <p>This is an example of a minimal OpenCPU app.</p>
+
+  <div style="padding:16px;">
+    Proteins : <input type="textbox", id="proteins", value='["EGFP","EYFP"]'></input>
+    Lasers : <input type="textbox" id="lasers", value='[488, 640]'></input>
+    Channels : <input type="textbox" id="channels", value='["580/30"]'></input>
+  </div>
+
+  <button id="plot">Plot</button>
+  <button id="reset">Reset</button>
+
+  <script type="text/javascript">
+  $(document).ready(function() {
+    $("#plot").click(function () {
+	  var proteins = $('#proteins').val();
+	  var lasers = $('#lasers').val();
+	  var channels = $('#channels').val();
+      var req = $("#plotdiv").rplot("iplot_spectra", {
+        proteins: JSON.parse(proteins),
+ 	    lasers: JSON.parse(lasers),
+	    channels: JSON.parse(channels)
+      }).fail(function(){
+           alert(req.responseText);
+  	  });
+    });
+
+    $("#reset").click(function () {
+	  $('#proteins').val('["EGFP","EYFP"]')
+      $('#lasers').val('[488, 640]')
+      $('#channels').val('["580/30"]')
+	});
+  });
+</script>
   
   <div id="plotdiv"></div>
   
