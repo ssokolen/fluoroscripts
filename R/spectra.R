@@ -50,6 +50,66 @@ calculate_ranges <- function(channels, min.wavelength, max.wavelength) {
 }
 
 #=========================================================================>
+# Format conversion functions
+
+#------------------------------------------------------------------------
+#' Convert excitation/emission matrix to excitation/emission curves
+#'
+#' Converts intesity data from an excitation/emission profile. First,
+#' the wavelength of maximum peak intensity is identified at each 
+#' excitation. The relative intensity at maximum emission forms the
+#' excitations curve, while the relative intensity at peak excitation
+#' forms the emission curve.
+#'
+#' @param excitation A vector of excitations.
+#' @param emission A vector of emissions.
+#' @param intensity A vector of intensities corresponding to each
+#'                  excitation/emission pair.
+#' @param basis A sequence of wavelength values (in nm) at which
+#'              the excitation and emission curves will be evaluated.
+#' 
+#' @return A data.frame with three columns --  wavelength, excitation, 
+#'         and emission (corresponding to the excitation and emission
+#'         curves).
+#' @export
+#'
+#------------------------------------------------------------------------
+generate_excitation_emission <- function(excitation, emission, intensity,
+  basis = seq(300, 800, length.out = 200)) {
+
+  # Forcing numerical values
+  excitation <- as.numeric(excitation)
+  emision <- as.numeric(emission)
+  intensity <- as.numeric(intensity)
+
+  # Checking for NAs
+  if (any(is.na(excitation), is.na(emission), is.na(intensity))) {
+    msg <- paste('The excitation, emission, and intensity vectors must',
+                 'be numeric and not contain NA values')
+    stop(msg)
+  }
+
+  # Combining into data.frame
+  d <- data.frame(excitation = excitation, emission = emission,
+                  intensity = intensity)
+
+  # Identifying maximum emission intensity for each excitation
+  d.em.max <- d %>%
+                group_by(excitation) %>%
+                summarize(wavelength = emission[intensity == max(intensity)],
+                          max.emission = emission[intensity = max(intensity)],
+                          n.max = sum(intensity == max(intensity)))
+
+  # Checking for multiple maximum values (which suggests an overflow occured)
+  if (any(d.em.max$n.max > 1)) {
+    msg <- 'Multiple maximum intensities identified, data may have overflown.'
+    warning(msg)
+  }
+
+  # Picking off peak emission at each excitation
+}
+
+#=========================================================================>
 # Functions relating areas under spectral curves
 
 #------------------------------------------------------------------------
