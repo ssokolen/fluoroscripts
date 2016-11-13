@@ -96,8 +96,8 @@ generate_excitation_emission <- function(excitation, emission, intensity,
   # Identifying maximum emission intensity for each excitation
   d.em.max <- d %>%
                 group_by(excitation) %>%
-                summarize(wavelength = emission[intensity == max(intensity)],
-                          max.emission = emission[intensity = max(intensity)],
+                summarize(emission = emission[intensity == max(intensity)],
+                          intensity = intensity[intensity = max(intensity)],
                           n.max = sum(intensity == max(intensity)))
 
   # Checking for multiple maximum values (which suggests an overflow occured)
@@ -106,7 +106,34 @@ generate_excitation_emission <- function(excitation, emission, intensity,
     warning(msg)
   }
 
-  # Picking off peak emission at each excitation
+  # Getting excitation and emission wavelengths at maximum intensity
+  d.max <- filter(d.em.max, intensity = max(intensity))
+  em.max <- d.max$emission
+  ex.max <- d.max$excitation
+
+  # Picking off the curves
+  ex <- filter(d, emission == em.max)
+  x.ex <- ex$excitation
+  y.ex <- ex$intensity
+
+  em <- filter(d, excitation == ex.max)
+  x.em <- em$emission
+  y.em <- em$intensity
+
+
+  f_extrapolate <- function(x, wavelength, intensity) {
+    f_interpolate <- splinefun(wavelength, intensity)
+    low <- min(wavelength)
+    high <- max(wavelength)
+    y <- ifelse((x > low) & (x < high), f_interpolate(x), 0)
+    y[y < 0] <- 0
+    y <- (y - min(y))/(max(y) - min(y))
+    y
+  }
+
+  out <- data.frame(wavelength = basis, 
+                    excitation = f_extrapolate(basis, x.ex, y.ex),
+                    emission = f_extrapolate(basis, x.em, y.em))
 }
 
 #=========================================================================>
