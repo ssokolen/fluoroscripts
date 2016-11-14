@@ -31,13 +31,14 @@ A data frame with four columns -- protein1, protein2, channel
         occupied by protein2 in a given channel.
 }
 \description{
-Calculates the overlaps in area under an emission spectra between all
+Calculates the pairwise overlaps in area under an emission spectra between 
 proteins. Areas are calculated by taking into account the specified 
-channels, and excitation by given laser wavelength. Overlap is reported
-as a fraction of area of specified protein. As an example the overlap
-of EGFP by EYFP will likely be different from the overlap of EYFP by EGFP.
-An overlap of NA means that the area of specified protein is 0 for the
-given channel (and would result in division by 0). An overlap of 0 means
-that the relative area of overlapping proteins is practically 0.
+channels and excitation by given laser wavelength. Pairs are constructed
+from all combinations of the given proteins and overlap is reported
+as a fraction of the area of the second protein in a given pair. For example, 
+the overlap of EGFP by EYFP will likely be different from the overlap of 
+EYFP by EGFP. An overlap of NA means that the area of the second protein is
+0 for the given channel (and would result in division by 0). An overlap of
+0 means that the relative area of overlapping proteins is practically 0.
 }
 

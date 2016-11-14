@@ -74,8 +74,8 @@ calculate_ranges <- function(channels, min.wavelength, max.wavelength) {
 #' @export
 #'
 #------------------------------------------------------------------------
-generate_excitation_emission <- function(excitation, emission, intensity,
-  basis = seq(300, 800, length.out = 200)) {
+matrix_to_spectra <- function(excitation, emission, intensity, wavelengths = NA,
+                              basis = seq(300, 800, length.out = 200)) {
 
   # Forcing numerical values
   excitation <- as.numeric(excitation)
@@ -96,8 +96,8 @@ generate_excitation_emission <- function(excitation, emission, intensity,
   # Identifying maximum emission intensity for each excitation
   d.em.max <- d %>%
                 group_by(excitation) %>%
-                summarize(emission = emission[intensity == max(intensity)],
-                          intensity = intensity[intensity = max(intensity)],
+                summarize(emission = emission[intensity == max(intensity)][1],
+                          intensity = intensity[intensity == max(intensity)][1],
                           n.max = sum(intensity == max(intensity)))
 
   # Checking for multiple maximum values (which suggests an overflow occured)
@@ -107,19 +107,35 @@ generate_excitation_emission <- function(excitation, emission, intensity,
   }
 
   # Getting excitation and emission wavelengths at maximum intensity
-  d.max <- filter(d.em.max, intensity = max(intensity))
+  d.max <- filter(d.em.max, intensity == max(intensity))
+  in.max <- d.max$intensity
   em.max <- d.max$emission
   ex.max <- d.max$excitation
 
-  # Picking off the curves
-  ex <- filter(d, emission == em.max)
-  x.ex <- ex$excitation
-  y.ex <- ex$intensity
+  if (is.na(wavelengths)) {
+    ex <- filter(d, emission == em.max)
+    x.ex <- ex$excitation
+    y.ex <- ex$intensity
 
-  em <- filter(d, excitation == ex.max)
-  x.em <- em$emission
-  y.em <- em$intensity
+    em <- filter(d, excitation == ex.max)
+    x.em <- em$emission
+    y.em <- em$intensity
+  }
+  else {
+    emissions <- unique(d$emission)
+    differences <- abs(emissions - wavelengths[2])
+    em.chosen <- emissions[which(differences == min(differences))]
+    ex <- filter(d, emission == em.chosen)
+    x.ex <- ex$excitation
+    y.ex <- ex$intensity
 
+    excitations <- unique(d$excitation)
+    differences <- abs(excitations - wavelengths[1])
+    ex.chosen <- excitations[which(differences == min(differences))]
+    em <- filter(d, excitation == ex.chosen)
+    x.em <- em$emission
+    y.em <- em$intensity
+  }
 
   f_extrapolate <- function(x, wavelength, intensity) {
     f_interpolate <- splinefun(wavelength, intensity)
